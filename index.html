@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Gerador 60+ Documentos - Pré-visualização PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+    <link rel="manifest" href="manifest.json">
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #eef2f7 0%, #d6e4f0 100%); 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+        
+        /* ========== TELA DE BOAS-VINDAS ========== */
+        #welcomeScreen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0a2b3e 0%, #1a4a6b 50%, #0d3a52 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            z-index: 2000;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .welcome-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .welcome-title {
+            color: white;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .welcome-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            max-width: 800px;
+            margin-bottom: 2.5rem;
+            width: 100%;
+        }
+        
+        .feature-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 1rem;
+            padding: 1.2rem;
+            text-align: center;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .feature-icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .feature-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+        .feature-desc { font-size: 0.8rem; opacity: 0.9; }
+        
+        .btn-enter {
+            background: linear-gradient(95deg, #4ade80, #22c55e);
+            color: white; padding: 16px 48px; border-radius: 50px; font-weight: 700; font-size: 1.1rem;
+            border: none; cursor: pointer; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+            transition: all 0.3s ease; display: flex; align-items: center; gap: 10px;
+        }
+        .btn-enter:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(34, 197, 94, 0.6); }
+        .btn-enter:active { transform: translateY(0); }
+        
+        .welcome-footer {
+            position: absolute; bottom: 2rem; color: rgba(255,255,255,0.7); font-size: 0.85rem; text-align: center;
+        }
+        
+        /* ========== CONTAINER PRINCIPAL ========== */
+        #mainApp {
+            display: none; max-width: 1300px; margin: auto; background: white;
+            border-radius: 1.5rem; box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            overflow: hidden; animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .header { 
+            background: linear-gradient(135deg, #0a2b3e, #1a4a6b); color: white; padding: 1.2rem 2rem;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .header h1 { font-size: 1.6rem; display: flex; align-items: center; gap: 10px; }
+        .header p { opacity: 0.9; font-size: 0.85rem; max-width: 600px; }
+        
+        .btn-preview-header {
+            background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 18px; border-radius: 25px; font-size: 0.85rem; cursor: pointer;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s; font-weight: 500;
+        }
+        .btn-preview-header:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+        
+        .form-grid { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .row-2col { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+        .row-2col > div { flex: 1; min-width: 180px; }
+        .field { display: flex; flex-direction: column; gap: 4px; }
+        label { font-weight: 600; font-size: 0.7rem; color: #1e4663; text-transform: uppercase; letter-spacing: 0.4px; }
+        .required:after { content: " *"; color: #c00; }
+        input, select, textarea { 
+            padding: 8px 12px; border: 1.5px solid #dce3ec; border-radius: 12px; 
+            font-size: 0.85rem; background: white; transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: #1e4a6e; box-shadow: 0 0 0 3px rgba(30, 74, 110, 0.1);
+        }
+        textarea { min-height: 150px; resize: vertical; font-family: monospace; }
+        
+        .template-bar { background: #f8fafc; padding: 0.8rem; border-radius: 1rem; margin-bottom: 0.2rem; border: 1px solid #e2e8f0; }
+        
+        .btn-group { display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .btn-primary { 
+            background: linear-gradient(95deg, #1e4a6e, #0f3b4f); color: white; padding: 12px 24px; 
+            border-radius: 40px; font-weight: bold; border: none; cursor: pointer; flex: 2; min-width: 150px;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 59, 79, 0.3); }
+        .btn-secondary { 
+            background: #eef2f7; border: 1px solid #cbd5e1; padding: 12px 24px; border-radius: 40px; 
+            font-weight: 600; cursor: pointer; flex: 1; min-width: 120px; transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-small { 
+            background: #e2e8f0; border: none; padding: 6px 12px; border-radius: 40px; font-weight: 600; 
+            cursor: pointer; font-size: 0.7rem; margin-left: 0.5rem; white-space: nowrap; transition: background 0.2s;
+        }
+        .btn-small:hover { background: #cbd5e1; }
+        
+        .error-msg { color: #c00; font-size: 0.7rem; display: none; animation: shake 0.3s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); }
+        }
+        
+        .toast { 
+            position: fixed; bottom: 20px; right: 20px; background: #0a2b3e; color: white; padding: 12px 24px; 
+            border-radius: 50px; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; 
+            z-index: 1000; font-size: 0.85rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: translateY(20px);
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        
+        .dynamic-fields-area { 
+            background: #fefce8; padding: 1rem; border-radius: 1rem; border-left: 4px solid #2c7da0; 
+            display: flex; flex-wrap: wrap; gap: 1rem; 
+        }
+        .dynamic-fields-area .field { flex: 1; min-width: 150px; }
+        
+        /* ========== MODAL DE PRÉ-VISUALIZAÇÃO PDF ========== */
+        #previewModal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); z-index: 1500; justify-content: center; align-items: center;
+            padding: 1rem; animation: fadeIn 0.3s ease-out;
+        }
+        
+        .modal-content {
+            background: white; border-radius: 1rem; width: 100%; max-width: 800px; max-height: 90vh;
+            display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+            animation: slideUp 0.4s ease-out;
+        }
+        
+        .modal-header {
+            padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex;
+            justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 1rem 1rem 0 0;
+        }
+        .modal-header h3 { font-size: 1.1rem; color: #0a2b3e; display: flex; align-items: center; gap: 8px; }
+        
+        .modal-close {
+            background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; width: 36px; height: 36px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .modal-close:hover { background: #e2e8f0; color: #0a2b3e; }
+        
+        .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; background: #f1f5f9; }
+        
+        .pdf-simulation {
+            background: white; padding: 25mm 20mm; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a;
+            max-width: 210mm; margin: 0 auto; position: relative; min-height: 250mm;
+        }
+        .pdf-simulation::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #0a2b3e, #1e4a6e, #0a2b3e);
+        }
+        
+        .pdf-header { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #0a2b3e; }
+        .pdf-title { font-size: 14pt; font-weight: bold; color: #0a2b3e; margin-bottom: 5px; }
+        .pdf-meta { font-size: 9pt; color: #4b5563; display: flex; justify-content: space-between; margin-top: 8px; }
+        .pdf-body { text-align: justify; margin-bottom: 30px; white-space: pre-wrap; }
+        .pdf-signature { margin-top: 40px; text-align: center; }
+        .pdf-signature-line { width: 200px; border-top: 1px solid #0a2b3e; margin: 0 auto 8px; }
+        .pdf-signature-text { font-size: 10pt; color: #4b5563; }
+        .pdf-footer {
+            position: absolute; bottom: 15mm; left: 20mm; right: 20mm; text-align: center;
+            font-size: 8pt; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px;
+        }
+        
+        .modal-footer {
+            padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex;
+            justify-content: flex-end; gap: 0.8rem; background: #f8fafc; border-radius: 0 0 1rem 1rem; flex-wrap: wrap;
+        }
+        
+        .btn-back-edit {
+            background: linear-gradient(95deg, #6366f1, #4f46e5); color: white; padding: 10px 20px;
+            border-radius: 30px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-back-edit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4); }
+        
+        .btn-print-pdf {
+            background: linear-gradient(95deg, #64748b, #475569); color: white; padding: 10px 20px;
+            border-radius: 30px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-print-pdf:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(71, 85, 105, 0.4); }
+        
+        .btn-download-pdf {
+            background: linear-gradient(95deg, #0a2b3e, #1e4a6e); color: white; padding: 10px 20px;
+            border-radius: 30px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-download-pdf:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 59, 79, 0.4); }
+        
+        footer { background: #f8fafc; text-align: center; padding: 0.7rem; font-size: 0.7rem; color: #4b6a8b; border-top: 1px solid #e2edf2; }
+        
+        /* ========== ESTILOS DE IMPRESSÃO ========== */
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            #welcomeScreen, .header, .template-bar, .form-grid, footer, #toastMsg { display: none !important; }
+            #previewModal {
+                position: static; background: transparent; display: block; padding: 0; box-shadow: none; animation: none;
+            }
+            .modal-content { box-shadow: none; border-radius: 0; max-height: none; background: transparent; animation: none; }
+            .modal-header, .modal-footer, .modal-close { display: none !important; }
+            .modal-body { padding: 0; background: transparent; overflow: visible; }
+            .pdf-simulation {
+                box-shadow: none; margin: 0 auto; padding: 15mm 20mm; max-width: 100%;
+                min-height: auto; background: white; border-radius: 0;
+            }
+            .pdf-simulation::before { display: none; }
+            .pdf-footer { position: relative; margin-top: 50px; border-top: 1px solid #ccc; bottom: auto; left: 0; right: 0; }
+            @page { margin: 15mm; size: A4; }
+        }
+        
+        @media (max-width: 700px) { 
+            .form-grid { padding: 1rem; }
+            .header { flex-direction: column; gap: 10px; text-align: center; }
+            .btn-group { flex-direction: column; }
+            .btn-primary, .btn-secondary { width: 100%; }
+            .welcome-title { font-size: 1.8rem; }
+            .welcome-subtitle { font-size: 1rem; }
+            .pdf-simulation { padding: 15mm; font-size: 10pt; }
+            .btn-preview-header { width: 100%; justify-content: center; }
+            .modal-footer { flex-direction: column; }
+            .btn-back-edit, .btn-print-pdf, .btn-download-pdf { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== TELA DE BOAS-VINDAS ========== -->
+    <div id="welcomeScreen">
+        <div class="welcome-logo">📄</div>
+        <h1 class="welcome-title">Gerador 60+ Documentos</h1>
+        <p class="welcome-subtitle">
+            Crie documentos profissionais em segundos! Ofícios, contratos, procurações, 
+            documentos políticos e muito mais — com pré-visualização em tempo real 
+            e exportação para PDF formatado.
+        </p>
+        
+        <div class="features-grid">
+            <div class="feature-card"><div class="feature-icon">🎯</div><div class="feature-title">60+ Modelos</div><div class="feature-desc">Templates prontos para uso imediato</div></div>
+            <div class="feature-card"><div class="feature-icon">⚡</div><div class="feature-title">Preenchimento Rápido</div><div class="feature-desc">Campos dinâmicos e intuitivos</div></div>
+            <div class="feature-card"><div class="feature-icon">👁️</div><div class="feature-title">Pré-visualização PDF</div><div class="feature-desc">Veja o documento formatado antes de baixar</div></div>
+            <div class="feature-card"><div class="feature-icon">🖨️</div><div class="feature-title">Imprimir ou Exportar</div><div class="feature-desc">PDF pronto ou impressão direta</div></div>
+        </div>
+        
+        <button class="btn-enter" id="btnEnterApp"><span>🚀</span> Entrar no Aplicativo</button>
+        <div class="welcome-footer">
+            <p>Aplicativo 100% gratuito • Funciona offline • Seus dados não saem do seu dispositivo</p>
+        </div>
+    </div>
+
+    <!-- ========== APLICATIVO PRINCIPAL ========== -->
+    <div id="mainApp" class="container">
+        <div class="header">
+            <div>
+                <h1>📄 Gerador 60+ Documentos</h1>
+                <p>Ofícios • Veículos • Imóveis • Procurações • Contratos • Políticos</p>
+            </div>
+            <button class="btn-preview-header" id="btnOpenPreview">👁️ Visualizar como PDF</button>
+        </div>
+        
+        <div class="form-grid">
+            <div class="template-bar">
+                <div class="field" style="flex:1">
+                    <label>📂 MODELOS (60 disponíveis)</label>
+                    <select id="categoriaSelect">
+                        <optgroup label="📬 Ofícios Oficiais (10)">
+                            <option value="solicitacao">Solicitação</option>
+                            <option value="encaminhamento">Encaminhamento</option>
+                            <option value="comunicacao">Interna</option>
+                            <option value="convite">Convite</option>
+                            <option value="notificacao">Notificação</option>
+                            <option value="retificacao">Retificação</option>
+                            <option value="convocacao">Convocação</option>
+                            <option value="prestacao">Prestação Contas</option>
+                            <option value="designacao">Designação</option>
+                            <option value="resposta">Resposta</option>
+                        </optgroup>
+                        <optgroup label="🚗 Veículos (5)">
+                            <option value="compra_veiculo">Compra/Venda</option>
+                            <option value="recibo_veiculo">Recibo</option>
+                            <option value="declaracao_venda_veiculo">Declaração Venda</option>
+                            <option value="autorizacao_transferencia">Autorização</option>
+                            <option value="reserva_veiculo">Reserva</option>
+                        </optgroup>
+                        <optgroup label="🏠 Imóveis (5)">
+                            <option value="compra_imovel">Compra/Venda</option>
+                            <option value="promessa_imovel">Promessa</option>
+                            <option value="locacao_imovel">Locação</option>
+                            <option value="recibo_imovel">Recibo</option>
+                            <option value="cessao_imovel">Cessão</option>
+                        </optgroup>
+                        <optgroup label="📜 Procurações (10)">
+                            <option value="procuracao_simples">Simples</option>
+                            <option value="procuracao_veiculo">Veículo</option>
+                            <option value="procuracao_imovel">Imóvel</option>
+                            <option value="procuracao_judicial">Judicial</option>
+                            <option value="procuracao_recebimento">Recebimento</option>
+                            <option value="procuracao_casamento">Casamento</option>
+                            <option value="procuracao_visto">Visto</option>
+                            <option value="procuracao_saude">Saúde</option>
+                            <option value="procuracao_bancaria">Bancária</option>
+                            <option value="procuracao_advogado">Substabelecimento</option>
+                        </optgroup>
+                        <optgroup label="📑 Contratos e Declarações (10)">
+                            <option value="contrato_servicos">Serviços</option>
+                            <option value="comodato">Comodato</option>
+                            <option value="declaracao_residencia">Residência</option>
+                            <option value="recibo_simples">Recibo</option>
+                            <option value="nomeacao_representante">Nomeação</option>
+                            <option value="testamento_simples">Testamento</option>
+                            <option value="uniao_estavel">União Estável</option>
+                            <option value="divorcio_consensual">Divórcio</option>
+                            <option value="doacao_bens">Doação</option>
+                            <option value="distrato">Distrato</option>
+                        </optgroup>
+                        <optgroup label="🆕 Outros Contratos (10)">
+                            <option value="fianca">Fiança</option>
+                            <option value="aviso_previo">Aviso Prévio</option>
+                            <option value="rescisao_trabalho">Rescisão Trabalho</option>
+                            <option value="termo_quitação">Quitação</option>
+                            <option value="empreitada">Empreitada</option>
+                            <option value="transporte_cargas">Transporte</option>
+                            <option value="garantia_bem">Garantia</option>
+                            <option value="corretagem">Corretagem</option>
+                            <option value="servidao">Servidão</option>
+                            <option value="cessao_credito">Cessão Crédito</option>
+                        </optgroup>
+                        <optgroup label="🏛️ DOCUMENTOS POLÍTICOS (10)">
+                            <option value="req_vereador">Requerimento a Vereador</option>
+                            <option value="oficio_deputado">Ofício a Deputado</option>
+                            <option value="emenda_parlamentar">Solicitação de Emenda</option>
+                            <option value="audiencia_publica">Pedido de Audiência Pública</option>
+                            <option value="indicacao_politica">Indicação ao Prefeito</option>
+                            <option value="mocao_aplauso">Moção de Aplauso</option>
+                            <option value="requerimento_informacao">Requerimento de Informações</option>
+                            <option value="convocacao_secretario">Convocação de Secretário</option>
+                            <option value="proposta_lei_simplificada">Proposta de Lei</option>
+                            <option value="pedido_fiscalizacao">Pedido de Fiscalização</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row-2col">
+                <div class="field" style="flex:2">
+                    <label class="required">📍 Local e Data</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="localData" placeholder="Cidade, dd de mês de aaaa" style="flex:1">
+                        <button type="button" id="btnDataAtual" class="btn-small">📅 Inserir data atual</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="required" id="numeroLabel">📌 Número/Referência</label>
+                    <input type="text" id="numeroDoc" placeholder="Protocolo ou identificador">
+                </div>
+            </div>
+
+            <div id="dynamicFields" class="dynamic-fields-area"></div>
+
+            <div class="field">
+                <label>📄 TEXTO FINAL DOCUMENTO (editável)</label>
+                <textarea id="documentText" rows="10" placeholder="Edite o texto do documento aqui. Use {{campo}} para inserir variáveis dinâmicas..."></textarea>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-primary" id="gerarPdfBtn">📄 GERAR PDF</button>
+                <button class="btn-secondary" id="limparBtn">🗑️ Limpar</button>
+            </div>
+            <div class="error-msg" id="errorMsg">Preencha Local/Data e Número.</div>
+        </div>
+        <footer>60 modelos • Aplicação automática • Pré-visualização em PDF • Exportação profissional</footer>
+    </div>
+
+    <!-- ========== MODAL DE PRÉ-VISUALIZAÇÃO PDF ========== -->
+    <div id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📄 Pré-visualização do Documento</h3>
+                <button class="modal-close" id="btnClosePreview">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="pdf-simulation" id="pdfPreviewContent">
+                    <!-- Conteúdo será injetado via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-back-edit" id="btnBackToEdit">✏️ Voltar para Edição</button>
+                <button class="btn-print-pdf" id="btnPrintDoc">🖨️ Imprimir</button>
+                <button class="btn-download-pdf" id="btnDownloadFromPreview">💾 Baixar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastMsg" class="toast">✔️ Modelo carregado</div>
+
+<script>
+    // --------------------------------------------------------------
+    // 60 MODELOS (base completa com documentos políticos)
+    // --------------------------------------------------------------
+    const templatesDB = {
+        // Ofícios
+        solicitacao: { campos: [], texto: `Prezado(a) Senhor(a),\n\nCom fundamento na portaria nº 045/2025, venho por meio deste solicitar a adoção das medidas necessárias para a implantação do novo sistema de protocolo integrado. O prazo para conclusão da fase piloto encerra-se em 30 de junho. Aguarda-se confirmação do cronograma.\n\nAtenciosamente,` },
+        encaminhamento: { campos: [], texto: `Prezado(a) Senhor(a),\n\nEncaminhamos em anexo o relatório quadrimestral de gestão. O documento foi elaborado conforme deliberação da comissão. Solicito ciência.\n\nAtenciosamente,` },
+        comunicacao: { campos: [], texto: `Prezados Colegas,\n\nInformamos as novas diretrizes para tramitação de processos internos. A partir de 1º de maio, todos os expedientes devem ser cadastrados no sistema SEI.\n\nAtenciosamente,` },
+        convite: { campos: [], texto: `Prezado(a) Senhor(a),\n\nConvidamos V. Sa. para reunião de alinhamento no dia 12 de maio de 2026, às 14h, no auditório. Solicito confirmação.\n\nAtenciosamente,` },
+        notificacao: { campos: [], texto: `Prezado(a) Senhor(a),\n\nNotificamos V. Sa. para apresentar documentos complementares no prazo de 10 dias úteis, sob pena de aplicação de sanções.\n\nAtenciosamente,` },
+        retificacao: { campos: [], texto: `Prezados interessados,\n\nNo edital publicado em 10 de abril, onde se lê "data da prova: 30 de maio", leia-se "06 de junho de 2026". Demais condições inalteradas.` },
+        convocacao: { campos: [], texto: `Prezado(a) Associado(a),\n\nFicam convocados todos os membros para Assembleia Geral Ordinária no dia 20 de maio, às 10h, na sede.\n\nAtenciosamente,` },
+        prestacao: { campos: [], texto: `Prezado(a) Senhor(a),\n\nEncaminhamos prestação de contas final do convênio. Solicitamos análise e emissão de quitação.\n\nAtenciosamente,` },
+        designacao: { campos: [], texto: `Prezado(a) Senhor(a),\n\nDesignamos o servidor Fulano de Tal, matrícula 123456, para exercer a função de Coordenador de Projetos Especiais.\n\nAtenciosamente,` },
+        resposta: { campos: [], texto: `Prezado(a) Senhor(a),\n\nEm resposta ao ofício, esclarecemos que o parecer técnico foi concluído pela viabilidade do projeto.\n\nAtenciosamente,` },
+        
+        // Veículos
+        compra_veiculo: { campos: ["nome_vendedor","nome_comprador","cpf_cnpj_vendedor","cpf_cnpj_comprador","veiculo_marca_modelo","ano_fabricacao","placa","chassi","valor_venda","forma_pagamento"], texto: `CONTRATO DE COMPRA E VENDA DE VEÍCULO\n\nVENDEDOR: {{nome_vendedor}}, CPF/CNPJ {{cpf_cnpj_vendedor}}. COMPRADOR: {{nome_comprador}}, CPF/CNPJ {{cpf_cnpj_comprador}}.\n\n1. OBJETO: veículo {{veiculo_marca_modelo}}, ano {{ano_fabricacao}}, placa {{placa}}, chassi {{chassi}}.\n2. VALOR: R$ {{valor_venda}}, pago: {{forma_pagamento}}.\n3. O vendedor declara que o veículo está livre de ônus.\n\nAssinam: ___________________` },
+        recibo_veiculo: { campos: ["nome_vendedor","nome_comprador","valor","placa_veiculo","data_entrega"], texto: `RECIBO DE COMPRA E VENDA DE VEÍCULO\n\nRecebi de {{nome_comprador}} a quantia de R$ {{valor}} pela venda do veículo placa {{placa_veiculo}}. Entregue em {{data_entrega}}. {{nome_vendedor}}` },
+        declaracao_venda_veiculo: { campos: ["nome_vendedor","cpf_vendedor","placa","nome_comprador","data_venda"], texto: `DECLARAÇÃO DE VENDA\n\nEu, {{nome_vendedor}}, CPF {{cpf_vendedor}}, declaro que vendi o veículo placa {{placa}} para {{nome_comprador}} em {{data_venda}}.` },
+        autorizacao_transferencia: { campos: ["nome_proprietario","cpf_proprietario","placa","nome_autorizado"], texto: `AUTORIZAÇÃO PARA TRANSFERÊNCIA\n\nAutorizo {{nome_autorizado}} a realizar a venda/transferência do veículo placa {{placa}}.` },
+        reserva_veiculo: { campos: ["vendedor","comprador","veiculo","reserva_valor","prazo"], texto: `RESERVA DE VEÍCULO\n\n{{vendedor}} reserva {{veiculo}} para {{comprador}} mediante sinal de R$ {{reserva_valor}}. Prazo: {{prazo}} dias.` },
+
+        // Imóveis
+        compra_imovel: { campos: ["vendedor_imovel","comprador_imovel","endereco_imovel","area","valor_imovel","forma_pagamento_imovel"], texto: `COMPRA E VENDA DE IMÓVEL\n\nVENDEDOR: {{vendedor_imovel}}. COMPRADOR: {{comprador_imovel}}. IMÓVEL: {{endereco_imovel}}, área {{area}} m². VALOR: R$ {{valor_imovel}}. Pagamento: {{forma_pagamento_imovel}}.` },
+        promessa_imovel: { campos: ["promitente","promissario","imovel_descricao","valor_promessa","prazo_escritura"], texto: `PROMESSA DE COMPRA E VENDA\n\n{{promitente}} promete vender a {{promissario}} o imóvel {{imovel_descricao}} por R$ {{valor_promessa}}. Escritura até {{prazo_escritura}}.` },
+        locacao_imovel: { campos: ["locador","locatario","endereco_imovel","aluguel","vencimento","prazo_locacao"], texto: `CONTRATO DE LOCAÇÃO\n\nLOCADOR: {{locador}}. LOCATÁRIO: {{locatario}}. IMÓVEL: {{endereco_imovel}}. ALUGUEL: R$ {{aluguel}} vencimento dia {{vencimento}}. PRAZO: {{prazo_locacao}} meses.` },
+        recibo_imovel: { campos: ["vendedor_imovel","comprador_imovel","valor_imovel","data_recibo"], texto: `RECIBO DE COMPRA DE IMÓVEL\n\nRecebemos de {{comprador_imovel}} R$ {{valor_imovel}} referente ao imóvel. Data: {{data_recibo}}. {{vendedor_imovel}}` },
+        cessao_imovel: { campos: ["cedente","cessionario","imovel_cessao","valor_cessao"], texto: `CESSÃO DE DIREITOS\n\n{{cedente}} cede a {{cessionario}} direitos sobre o imóvel {{imovel_cessao}} por R$ {{valor_cessao}}.` },
+
+        // Procurações
+        procuracao_simples: { campos: ["outorgante","outorgado","poderes"], texto: `PROCURAÇÃO SIMPLES\n\n{{outorgante}} constitui procurador {{outorgado}} para {{poderes}}.` },
+        procuracao_veiculo: { campos: ["outorgante_veiculo","outorgado_veiculo","placa_veiculo_proc"], texto: `PROCURAÇÃO VEÍCULO\n\n{{outorgante_veiculo}} autoriza {{outorgado_veiculo}} a transferir veículo placa {{placa_veiculo_proc}}.` },
+        procuracao_imovel: { campos: ["outorgante_imovel","outorgado_imovel","imovel_proc"], texto: `PROCURAÇÃO IMÓVEL\n\n{{outorgante_imovel}} nomeia {{outorgado_imovel}} para vender/hipotecar o imóvel {{imovel_proc}}.` },
+        procuracao_judicial: { campos: ["parte","advogado","processo_num"], texto: `PROCURAÇÃO JUDICIAL\n\n{{parte}} constitui advogado {{advogado}} nos autos do processo {{processo_num}}.` },
+        procuracao_recebimento: { campos: ["credor","procurador","divida"], texto: `PROCURAÇÃO PARA RECEBIMENTO\n\n{{credor}} autoriza {{procurador}} a receber R$ {{divida}}.` },
+        procuracao_casamento: { campos: ["noivo","noiva","autorizado"], texto: `PROCURAÇÃO PARA CASAMENTO\n\n{{noivo}} e {{noiva}} outorgam poderes a {{autorizado}} para representá-los no casamento civil.` },
+        procuracao_visto: { campos: ["requerente","procurador_visto","pais_destino"], texto: `PROCURAÇÃO PARA VISTO CONSULAR\n\n{{requerente}} nomeia {{procurador_visto}} para solicitar visto para {{pais_destino}}.` },
+        procuracao_saude: { campos: ["paciente","representante_saude","hospital"], texto: `PROCURAÇÃO PARA SAÚDE\n\n{{paciente}} autoriza {{representante_saude}} a tomar decisões médicas no hospital {{hospital}}.` },
+        procuracao_bancaria: { campos: ["cliente","representante_banco","instituicao"], texto: `PROCURAÇÃO BANCÁRIA\n\n{{cliente}} autoriza {{representante_banco}} a movimentar contas no {{instituicao}}.` },
+        procuracao_advogado: { campos: ["outorgante_adv","substituto_adv","poderes_adv"], texto: `SUBSTABELECIMENTO\n\nO advogado {{outorgante_adv}} substabelece poderes a {{substituto_adv}} para {{poderes_adv}}.` },
+
+        // Contratos e Declarações
+        contrato_servicos: { campos: ["contratante","contratado","servico","valor_servico","prazo_servico"], texto: `CONTRATO DE PRESTAÇÃO DE SERVIÇOS\n\nContratante: {{contratante}}. Contratado: {{contratado}}. Objeto: {{servico}}. Valor: R$ {{valor_servico}}. Prazo: {{prazo_servico}}.` },
+        comodato: { campos: ["comodante","comodatario","bem_comodato","prazo_comodato"], texto: `COMODATO\n\n{{comodante}} empresta {{bem_comodato}} a {{comodatario}} por {{prazo_comodato}} meses.` },
+        declaracao_residencia: { campos: ["declarante","endereco_residencia","tempo_residencia"], texto: `DECLARAÇÃO DE RESIDÊNCIA\n\n{{declarante}} reside na Rua {{endereco_residencia}} há {{tempo_residencia}}.` },
+        recibo_simples: { campos: ["recebedor","pagador","valor_recibo","motivo"], texto: `RECIBO\n\nRecebi de {{pagador}} R$ {{valor_recibo}} referente a {{motivo}}. {{recebedor}}` },
+        nomeacao_representante: { campos: ["nomeante","representante","finalidade"], texto: `NOMEAÇÃO DE REPRESENTANTE\n\n{{nomeante}} nomeia {{representante}} para {{finalidade}}.` },
+        testamento_simples: { campos: ["testador","testamenteiro","bens_deixados"], texto: `TESTAMENTO VITAL (Declaração)\n\nEu, {{testador}}, nomeio {{testamenteiro}} para cuidar de meus bens: {{bens_deixados}} conforme minha vontade.` },
+        uniao_estavel: { campos: ["companheiro_a","companheiro_b","inicio_uniao","regime_bens"], texto: `DECLARAÇÃO DE UNIÃO ESTÁVEL\n\n{{companheiro_a}} e {{companheiro_b}} declaram união estável iniciada em {{inicio_uniao}} sob regime {{regime_bens}}.` },
+        divorcio_consensual: { campos:["req1","req2","filhos","partilha"], texto: `PEDIDO DE DIVÓRCIO CONSENSUAL\n\n{{req1}} e {{req2}} requerem divórcio, com filhos {{filhos}} e partilha: {{partilha}}.` },
+        doacao_bens: { campos:["doador","donatario","bem_doado","valor_doado"], texto: `ESCRITURA DE DOAÇÃO\n\n{{doador}} doa a {{donatario}} o bem {{bem_doado}} no valor de R$ {{valor_doado}}.` },
+        distrato: { campos:["parte_a","parte_b","contrato_distratado","motivo_distrato"], texto: `DISTRATO DE CONTRATO\n\n{{parte_a}} e {{parte_b}} resolvem rescindir o contrato {{contrato_distratado}} por {{motivo_distrato}}.` },
+
+        // Outros Contratos (10)
+        fianca: { campos:["fiador","devedor","credor_fianca","valor_fianca","prazo_fianca"], texto: `CONTRATO DE FIANÇA\n\nFiador: {{fiador}}. Devedor: {{devedor}}. Credor: {{credor_fianca}}. Valor garantido: R$ {{valor_fianca}}. Prazo: {{prazo_fianca}}.` },
+        aviso_previo: { campos:["empregador","empregado","data_desligamento","motivo_aviso"], texto: `AVISO PRÉVIO TRABALHISTA\n\n{{empregador}} comunica a {{empregado}} o desligamento a partir de {{data_desligamento}}, motivo: {{motivo_aviso}}.` },
+        rescisao_trabalho: { campos:["empresa","funcionario","data_rescisao","verbas"], texto: `RESCISÃO CONTRATO TRABALHO\n\n{{empresa}} e {{funcionario}} rescindem o contrato em {{data_rescisao}}. Verbas rescisórias: {{verbas}}` },
+        termo_quitação: { campos:["devedor_quit","credor_quit","obrigacao","data_quitacao"], texto: `TERMO DE QUITAÇÃO\n\nO devedor {{devedor_quit}} quitou integralmente a obrigação {{obrigacao}} perante {{credor_quit}} em {{data_quitacao}}. Dá-se plena quitação.` },
+        empreitada: { campos:["empreiteiro","contratante_emp","obra","valor_empreitada","prazo_empreitada"], texto: `CONTRATO DE EMPREITADA\n\nEmpreiteiro: {{empreiteiro}}. Contratante: {{contratante_emp}}. Obra: {{obra}}. Valor: R$ {{valor_empreitada}}. Prazo: {{prazo_empreitada}} dias.` },
+        transporte_cargas: { campos:["transportador","contratante_transp","carga","valor_frete","rota"], texto: `CONTRATO DE TRANSPORTE\n\nTransportador: {{transportador}}. Contratante: {{contratante_transp}}. Carga: {{carga}}. Frete: R$ {{valor_frete}}. Rota: {{rota}}.` },
+        garantia_bem: { campos:["garantidor","beneficiario_garantia","bem_garantido","prazo_garantia"], texto: `GARANTIA DE BEM\n\n{{garantidor}} garante o bem {{bem_garantido}} a {{beneficiario_garantia}} por {{prazo_garantia}} meses.` },
+        corretagem: { campos:["corretor","cliente_corretagem","imovel_corretagem","comissao"], texto: `CONTRATO DE CORRETAGEM\n\nCorretor: {{corretor}}. Cliente: {{cliente_corretagem}}. Imóvel: {{imovel_corretagem}}. Comissão: {{comissao}}%.` },
+        servidao: { campos:["proprietario_serviente","proprietario_dominante","area_servidao","onus"], texto: `INSTITUIÇÃO DE SERVIDÃO\n\n{{proprietario_serviente}} constitui servidão em favor de {{proprietario_dominante}} sobre a área {{area_servidao}}, com ônus: {{onus}}.` },
+        cessao_credito: { campos:["cedente_credito","cessionario_credito","credito_valor","devedor_cedido"], texto: `CESSÃO DE CRÉDITO\n\n{{cedente_credito}} cede a {{cessionario_credito}} o crédito de R$ {{credito_valor}} contra {{devedor_cedido}}.` },
+
+        // Documentos Políticos (10)
+        req_vereador: { campos:["nome_vereador","partido_vereador","cidade_camara","assunto_req","justificativa"], texto: `REQUERIMENTO AO SENHOR VEREADOR\n\nIlustríssimo Senhor {{nome_vereador}}, do partido {{partido_vereador}}, na Câmara Municipal de {{cidade_camara}}.\n\nO(A) abaixo assinado(a), cidadão(ã) regular, vem respeitosamente requerer a Vossa Excelência que adote as providências cabíveis para {{assunto_req}}.\n\nJustificativa: {{justificativa}}.\n\nNestes termos, pede deferimento.\n\nAssinatura: ___________________` },
+        oficio_deputado: { campos:["deputado_nome","deputado_cargo","uf","assunto_oficio","corpo_texto"], texto: `OFÍCIO AO DEPUTADO(A) {{deputado_nome}}\n\nSenhor(a) Deputado(a) {{deputado_cargo}} da Assembleia Legislativa / Câmara Federal – {{uf}}.\n\nAssunto: {{assunto_oficio}}\n\n{{corpo_texto}}\n\nAtenciosamente, ___________________` },
+        emenda_parlamentar: { campos:["parlamentar","valor_emenda","projeto_nome","justificativa_emenda"], texto: `SOLICITAÇÃO DE EMENDA PARLAMENTAR\n\nExcelentíssimo Senhor {{parlamentar}},\n\nVenho solicitar a destinação de emenda no valor de R$ {{valor_emenda}} para o projeto {{projeto_nome}}.\n\nJustificativa: {{justificativa_emenda}}.\n\nContamos com seu apoio para a melhoria da nossa comunidade.` },
+        audiencia_publica: { campos:["autoridade_destino","tema_audiencia","data_sugerida","local_sugerido","motivacao"], texto: `PEDIDO DE AUDIÊNCIA PÚBLICA\n\nAo(à) Excelentíssimo(a) {{autoridade_destino}}.\n\nRequeremos a realização de audiência pública para debater {{tema_audiencia}}, a ser realizada preferencialmente em {{data_sugerida}} no local {{local_sugerido}}.\n\nMotivação: {{motivacao}}.\n\nTermos em que pede deferimento.` },
+        indicacao_politica: { campos:["prefeito","secretario","assunto_indicacao","medida_sugerida"], texto: `INDICAÇÃO AO PREFEITO MUNICIPAL\n\nSenhor Prefeito {{prefeito}}, com cópia ao Secretário {{secretario}}.\n\nIndicamos a necessidade de adoção da seguinte medida: {{assunto_indicacao}}.\n\nSugestão concreta: {{medida_sugerida}}.\n\nRequeremos providências no âmbito da administração pública municipal.` },
+        mocao_aplauso: { campos:["homenageado","entidade_promotora","motivo_aplauso","texto_mocao"], texto: `MOÇÃO DE APLAUSO\n\nA {{entidade_promotora}}, por seus representantes, outorga a presente Moção de Aplauso ao(à) {{homenageado}}, em virtude de {{motivo_aplauso}}.\n\nTexto da Moção: {{texto_mocao}}.\n\nData: {{localData}}.` },
+        requerimento_informacao: { campos:["orgao_destino","assunto_info","perguntas"], texto: `REQUERIMENTO DE INFORMAÇÕES\n\nAo órgão {{orgao_destino}}.\n\nCom fundamento na Lei de Acesso à Informação, requeremos esclarecimentos sobre {{assunto_info}}.\n\nPerguntas específicas: {{perguntas}}.\n\nPrazo regimental para resposta.` },
+        convocacao_secretario: { campos:["secretario_nome","orgao_legislativo","data_convocacao","pauta_convocacao"], texto: `CONVOCAÇÃO DE SECRETÁRIO MUNICIPAL\n\nO {{orgao_legislativo}}, no uso de suas atribuições, CONVOCA o Senhor Secretário {{secretario_nome}} para comparecer em {{data_convocacao}} a fim de prestar esclarecimentos sobre a pauta: {{pauta_convocacao}}.\n\nSob pena de aplicação das sanções legais.` },
+        proposta_lei_simplificada: { campos:["autor_proposta","ementa","artigos_resumidos","justificativa_lei"], texto: `PROPOSTA DE LEI (MINUTA)\n\nAutor: {{autor_proposta}}\n\nEMENTA: {{ementa}}\n\nArt. 1º - {{artigos_resumidos}}\n\nArt. 2º - Esta lei entra em vigor na data de sua publicação.\n\nJUSTIFICATIVA: {{justificativa_lei}}` },
+        pedido_fiscalizacao: { campos:["tribunal","orgao_fiscalizado","objeto_fiscalizacao","indicios_irregularidade"], texto: `PEDIDO DE FISCALIZAÇÃO\n\nAo Tribunal {{tribunal}}.\n\nSolicitamos que seja realizada auditoria/fiscalização no órgão {{orgao_fiscalizado}} quanto ao objeto {{objeto_fiscalizacao}}.\n\nIndícios de irregularidade: {{indicios_irregularidade}}.\n\nRequeremos medidas cabíveis.` }
+    };
+
+    // DOM elements
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const mainApp = document.getElementById('mainApp');
+    const previewModal = document.getElementById('previewModal');
+    
+    const btnEnterApp = document.getElementById('btnEnterApp');
+    const btnOpenPreview = document.getElementById('btnOpenPreview');
+    const btnClosePreview = document.getElementById('btnClosePreview');
+    const btnBackToEdit = document.getElementById('btnBackToEdit');
+    const btnPrintDoc = document.getElementById('btnPrintDoc');
+    const btnDownloadFromPreview = document.getElementById('btnDownloadFromPreview');
+    
+    const selectModelo = document.getElementById('categoriaSelect');
+    const localDataInput = document.getElementById('localData');
+    const numeroDocInput = document.getElementById('numeroDoc');
+    const dynamicFieldsDiv = document.getElementById('dynamicFields');
+    const documentTextarea = document.getElementById('documentText');
+    const pdfPreviewContent = document.getElementById('pdfPreviewContent');
+    const gerarBtn = document.getElementById('gerarPdfBtn');
+    const limparBtn = document.getElementById('limparBtn');
+    const btnDataAtual = document.getElementById('btnDataAtual');
+    const errorMsg = document.getElementById('errorMsg');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // ========== FUNÇÕES DE NAVEGAÇÃO ==========
+    
+    btnEnterApp.addEventListener('click', () => {
+        welcomeScreen.style.display = 'none';
+        mainApp.style.display = 'block';
+        showToast('🎉 Bem-vindo! Selecione um modelo para começar');
+        if (!documentTextarea.value) loadModel('solicitacao');
+    });
+
+    btnOpenPreview.addEventListener('click', () => {
+        updatePDFPreview();
+        previewModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    });
+
+    function closePreviewModal() {
+        previewModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    
+    btnClosePreview.addEventListener('click', closePreviewModal);
+    btnBackToEdit.addEventListener('click', closePreviewModal);
+    
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) closePreviewModal();
+    });
+
+    btnPrintDoc.addEventListener('click', () => window.print());
+    
+    btnDownloadFromPreview.addEventListener('click', () => {
+        closePreviewModal();
+        gerarPDF();
+    });
+
+    // ========== FUNÇÕES PRINCIPAIS ==========
+
+    function showToast(msg) {
+        toastMsg.textContent = msg;
+        toastMsg.classList.add('show');
+        setTimeout(() => toastMsg.classList.remove('show'), 2000);
+    }
+
+    function getDataFormatada() {
+        const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        const hoje = new Date();
+        const dia = hoje.getDate();
+        const mes = meses[hoje.getMonth()];
+        const ano = hoje.getFullYear();
+        return `Cidade, ${dia} de ${mes} de ${ano}`;
+    }
+
+    btnDataAtual.addEventListener('click', () => {
+        localDataInput.value = getDataFormatada();
+        updatePDFPreview();
+        showToast('📅 Data atual inserida (edite a cidade)');
+    });
+
+    function loadModel(modelId) {
+        const model = templatesDB[modelId];
+        if (!model) return;
+        
+        dynamicFieldsDiv.innerHTML = '';
+        if (model.campos && model.campos.length) {
+            model.campos.forEach(campo => {
+                const div = document.createElement('div');
+                div.className = 'field';
+                const label = document.createElement('label');
+                label.textContent = campo.replace(/_/g, ' ').toUpperCase();
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Informe ${campo}`;
+                input.id = `campo_${campo}`;
+                input.addEventListener('input', updatePDFPreview);
+                div.appendChild(label);
+                div.appendChild(input);
+                dynamicFieldsDiv.appendChild(div);
+            });
+        } else {
+            dynamicFieldsDiv.innerHTML = '<p style="font-size:0.8rem;">✅ Documento sem campos específicos. Edite o texto diretamente.</p>';
+        }
+        documentTextarea.value = model.texto;
+        
+        const oficios = ["solicitacao","encaminhamento","comunicacao","convite","notificacao","retificacao","convocacao","prestacao","designacao","resposta"];
+        const politicos = ["req_vereador","oficio_deputado","emenda_parlamentar","audiencia_publica","indicacao_politica","mocao_aplauso","requerimento_informacao","convocacao_secretario","proposta_lei_simplificada","pedido_fiscalizacao"];
+        if (politicos.includes(modelId)) document.getElementById('numeroLabel').innerHTML = '📌 N° Protocolo / Ofício';
+        else if (oficios.includes(modelId)) document.getElementById('numeroLabel').innerHTML = '📌 Número do Ofício';
+        else document.getElementById('numeroLabel').innerHTML = '📌 Número/Ref.';
+        
+        updatePDFPreview();
+        showToast(`✅ Modelo "${selectModelo.options[selectModelo.selectedIndex]?.text}" carregado`);
+    }
+
+    function getPreviewText() {
+        let texto = documentTextarea.value;
+        const camposDin = document.querySelectorAll('#dynamicFields input');
+        camposDin.forEach(inp => {
+            const nome = inp.id.replace('campo_', '');
+            const val = inp.value.trim();
+            const regex = new RegExp(`{{${nome}}}`, 'g');
+            texto = texto.replace(regex, val || '[_____]');
+        });
+        const local = localDataInput.value.trim() || '[Local]';
+        const numero = numeroDocInput.value.trim() || '[Número]';
+        texto = texto.replace(/{{localData}}/g, local).replace(/{{numeroDoc}}/g, numero);
+        return texto;
+    }
+
+    function updatePDFPreview() {
+        const textoCompleto = getPreviewText();
+        const local = localDataInput.value.trim() || 'Cidade, __ de _______ de ____';
+        const numero = numeroDocInput.value.trim() || '___/____';
+        
+        const linhas = textoCompleto.split('\n');
+        let titulo = 'DOCUMENTO';
+        for (let linha of linhas) {
+            const limpa = linha.trim();
+            if (limpa && limpa === limpa.toUpperCase() && limpa.length > 5 && limpa.length < 80) {
+                titulo = limpa.replace(/[^\w\sÀ-ú]/g, '');
+                break;
+            }
+        }
+        
+        pdfPreviewContent.innerHTML = `
+            <div class="pdf-header">
+                <div class="pdf-title">${titulo}</div>
+                <div class="pdf-meta">
+                    <span>📍 ${local}</span>
+                    <span>📋 Ref: ${numero}</span>
+                </div>
+            </div>
+            <div class="pdf-body">${textoCompleto}</div>
+            <div class="pdf-signature">
+                <div class="pdf-signature-line"></div>
+                <div class="pdf-signature-text">Assinatura</div>
+            </div>
+            <div class="pdf-footer">
+                Documento gerado via Gerador 60+ Documentos • ${new Date().toLocaleDateString('pt-BR')}
+            </div>
+        `;
+    }
+
+    localDataInput.addEventListener('input', updatePDFPreview);
+    numeroDocInput.addEventListener('input', updatePDFPreview);
+    documentTextarea.addEventListener('input', updatePDFPreview);
+
+    selectModelo.addEventListener('change', () => {
+        const selected = selectModelo.value;
+        if (selected && templatesDB[selected]) loadModel(selected);
+    });
+
+    async function gerarPDF() {
+        const local = localDataInput.value.trim();
+        const numero = numeroDocInput.value.trim();
+        if (!local || !numero) {
+            errorMsg.style.display = 'block';
+            setTimeout(() => errorMsg.style.display = 'none', 2000);
+            return;
+        }
+        const corpo = getPreviewText();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const margemEsq = 20;
+        const larguraUtil = 170;
+        let y = 20;
+        
+        doc.setFillColor(10, 43, 62);
+        doc.rect(0, 0, 210, 15, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('DOCUMENTO OFICIAL', 105, 10, { align: 'center' });
+        
+        doc.setTextColor(26, 26, 26);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        y = 22;
+        doc.text(`Local/Data: ${local}`, 190, y, { align: 'right' });
+        y += 5;
+        doc.text(`Referência: ${numero}`, margemEsq, y);
+        y += 10;
+        
+        doc.setFont('times', 'normal');
+        doc.setFontSize(11);
+        const linhasPDF = doc.splitTextToSize(corpo, larguraUtil);
+        for (let i = 0; i < linhasPDF.length; i++) {
+            if (y > 275) { doc.addPage(); y = 25; }
+            doc.text(linhasPDF[i], margemEsq, y);
+            y += 6;
+        }
+        
+        if (y < 260) {
+            y += 15;
+            doc.setDrawColor(10, 43, 62);
+            doc.line(105, y, 155, y);
+            y += 7;
+            doc.setFontSize(9);
+            doc.text('Assinatura', 130, y, { align: 'center' });
+        }
+        
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Gerado via Gerador 60+ Documentos • ${new Date().toLocaleDateString('pt-BR')}`, 105, 290, { align: 'center' });
+        
+        doc.save(`documento_${numero.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+        showToast('📄 PDF gerado com sucesso!');
+    }
+
+    function limparFormulario() {
+        if (confirm('Limpar todos os campos? Os dados serão apagados.')) {
+            localDataInput.value = '';
+            numeroDocInput.value = '';
+            documentTextarea.value = '';
+            dynamicFieldsDiv.innerHTML = '';
+            updatePDFPreview();
+            showToast('🗑️ Formulário limpo');
+        }
+    }
+
+    gerarBtn.addEventListener('click', gerarPDF);
+    limparBtn.addEventListener('click', limparFormulario);
+
+    loadModel('solicitacao');
+</script>
+</body>
+</html>
